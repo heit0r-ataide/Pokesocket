@@ -120,16 +120,21 @@ while True:
         print("          SUA VEZ!")
         print("==============================")
 
-        print("\n1 - Atacar")
-        print("\n2 - Sair")
+        print("\nEscolha seu ataque:")
+
+        print("\n1 - Ataque rápido (10 de dano)")
+        print("2 - Ataque normal (20 de dano)")
+        print("3 - Ataque forte (30 de dano)")
+        print("4 - Ataque devastador (40 de dano)")
+        print("\n5 - Sair")
 
         option = input("> ")
 
-        if option == "1":
-            client.send(ATTACK.encode("utf-8"))
+        if option in ["1", "2", "3", "4"]:
+            client.send(f"{ATTACK}:{option}".encode("utf-8"))
             state = "OPPONENT_TURN"
 
-        elif option == "2":
+        elif option == "5":
             break
 
         else:

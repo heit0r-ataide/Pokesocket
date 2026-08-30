@@ -77,7 +77,7 @@ def handle_client(conn, addr):
                     else:
                         conn.send(WAITING.encode("utf-8"))
 
-            elif message == ATTACK:
+            elif message.startswith(ATTACK+":"):
 
                 with lock:
                     if not game.started:
@@ -90,11 +90,23 @@ def handle_client(conn, addr):
                             f"Tentou o atacar fora do turno"
                         )
                         continue
+                    try:
+                        attack_key = int(message.split(":")[1])
 
-                hp = game.attack(player_index)
+                    except (IndexError, ValueError):
+                        print("Ataque inválido.")
+                        continue
+
+                    if attack_key not in game.attacks:
+                        print("Ataque inexistente.")
+                        continue
+
+                hp = game.attack(player_index, attack_key)
+                attack_name = game.attacks[attack_key]["name"]
+                damage = game.attacks[attack_key]["damage"]
 
                 print(
-                    f"Jogador {player_index + 1} atacou"
+                    f"Jogador {player_index + 1} usou {attack_name}"
                 )
                 print(f"HP do adversário: {hp}")
 
