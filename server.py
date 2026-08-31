@@ -102,9 +102,15 @@ def handle_client(conn, addr):
                         continue
 
                 hp = game.attack(player_index, attack_key)
+
+                if hp is None:
+                    send_message(conn, "Stamina insuficiente!")
+                    continue
+
                 attack_name = game.attacks[attack_key]["name"]
                 damage = game.attacks[attack_key]["damage"]
 
+                print("Dano causado:", damage)
                 print(
                     f"Jogador {player_index + 1} usou {attack_name}"
                 )

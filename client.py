@@ -40,6 +40,11 @@ def receive_messages(client):
 
                 state = "OPPONENT_TURN"
 
+            elif message == "Stamina insuficiente!":
+
+                state = "MY_TURN"
+                print("\nStamina insuficiente!")
+
             else:
 
                 print(f"\nServidor: {message}")
@@ -122,23 +127,26 @@ while True:
 
         print("\nEscolha seu ataque:")
 
-        print("\n1 - Ataque rápido (10 de dano)")
-        print("2 - Ataque normal (20 de dano)")
-        print("3 - Ataque forte (30 de dano)")
-        print("4 - Ataque devastador (40 de dano)")
+        print("\n1 - Ataque rápido (10 de dano) (0 de stamina)")
+        print("2 - Ataque normal (20 de dano) (15 de stamina)")
+        print("3 - Ataque forte (30 de dano) (30 de stamina)")
+        print("4 - Ataque devastador (40 de dano) (50 de stamina)")
         print("\n5 - Sair")
 
         option = input("> ")
 
         if option in ["1", "2", "3", "4"]:
             client.send(f"{ATTACK}:{option}".encode("utf-8"))
-            state = "OPPONENT_TURN"
+            state = "WAITING_ATTACK_RESULT"
 
         elif option == "5":
             break
 
         else:
             print("Opção inválida.")
+
+    elif state == "WAITING_ATTACK_RESULT":
+        sleep(0.1)
 
     elif state == "OPPONENT_TURN":
 
