@@ -1,7 +1,17 @@
-READY = "READY\n"
-WAITING = "WAITING\n"
-START = "START\n"
+READY = "READY"
+WAITING = "WAITING"
+START = "START"
+NAME = "NAME"
 
-ATTACK = "ATTACK\n"
-TURN = "TURN\n"
-WAIT_TURN = "WAIT_TURN\n"
+ATTACK = "ATTACK"
+TURN = "TURN"
+WAIT_TURN = "WAIT_TURN"
+WAIT_ACTION = "WAIT_ACTION"
+
+
+def format_message(message):
+    return f"{message}\n"
+
+
+def normalize_message(message):
+    return message.strip()
