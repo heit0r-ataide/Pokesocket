@@ -3,7 +3,7 @@ from game import Game
 import socket
 import threading
 
-from protocol import READY, WAITING, START, ATTACK, TURN, WAIT_TURN, NAME, format_message, normalize_message
+from protocol import READY, WAITING, START, ATTACK, TURN, WAIT_TURN, WAIT_ACTION, NAME, format_message, normalize_message
 
 
 HOST = "0.0.0.0"
