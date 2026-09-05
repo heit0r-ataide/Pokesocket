@@ -1,9 +1,11 @@
 import socket
+import subprocess
+import sys
 import threading
 import tkinter as tk
 from tkinter import messagebox
 
-from protocol import READY, WAITING, START, ATTACK, TURN, WAIT_TURN, WAIT_ACTION, NAME, format_message, normalize_message
+from protocol import READY, WAITING, START, ATTACK, CHAT, TURN, WAIT_TURN, WAIT_ACTION, NAME, format_message, normalize_message
 
 HOST = "127.0.0.1"
 PORT = 5000
@@ -33,8 +35,11 @@ class BattleClient:
         self.player_stamina = 100
         self.opponent_hp = 100
         self.opponent_stamina = 100
+        self.speech_queue = queue.Queue()
 
         self.setup_ui()
+        self.speech_thread = threading.Thread(target=self.speech_loop, daemon=True)
+        self.speech_thread.start()
         self.update_ui()
 
     def setup_ui(self):
@@ -84,6 +89,28 @@ class BattleClient:
             state="disabled",
         )
         self.ready_btn.pack(pady=(0, 16))
+
+        self.chat_frame = tk.Frame(self.main, bg="#111827")
+        self.chat_frame.pack(fill="x", pady=(0, 12))
+
+        self.chat_var = tk.StringVar()
+        self.chat_entry = tk.Entry(self.chat_frame, textvariable=self.chat_var, font=("Arial", 11))
+        self.chat_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
+        self.chat_entry.bind("<Return>", self.send_chat)
+
+        self.chat_btn = tk.Button(
+            self.chat_frame,
+            text="Enviar mensagem",
+            command=self.send_chat,
+            bg="#0891b2",
+            fg="white",
+            font=("Arial", 11, "bold"),
+            relief="flat",
+            padx=12,
+            pady=8,
+            state="disabled",
+        )
+        self.chat_btn.pack(side="left")
 
         self.status_container = tk.Frame(self.main, bg="#1f2937", padx=16, pady=12)
         self.status_container.pack(fill="x", pady=(0, 12))
@@ -140,6 +167,34 @@ class BattleClient:
         self.log_box.see(tk.END)
         self.log_box.configure(state="disabled")
 
+    def speech_loop(self):
+        while True:
+            message = self.speech_queue.get()
+            if sys.platform != "win32":
+                continue
+
+            environment = os.environ.copy()
+            environment["BATTLE_CHAT_TEXT"] = message
+            speech_script = (
+                "$voice = New-Object -ComObject SAPI.SpVoice; "
+                "$voice.Volume = 100; "
+                "$voice.Rate = 0; "
+                "$voice.Speak($env:BATTLE_CHAT_TEXT)"
+            )
+            try:
+                result = subprocess.run(
+                    ["powershell.exe", "-NoProfile", "-STA", "-Command", speech_script],
+                    env=environment,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                    check=False,
+                )
+                if result.returncode != 0:
+                    self.root.after(0, self.log, "Não foi possível reproduzir a voz.")
+            except OSError:
+                self.root.after(0, self.log, "PowerShell não está disponível para reproduzir a voz.")
+
     def update_status(self):
         self.player_status.set(f"Você: HP {self.player_hp} | Stamina {self.player_stamina}")
         self.opponent_status.set(f"Adversário: HP {self.opponent_hp} | Stamina {self.opponent_stamina}")
@@ -151,6 +206,10 @@ class BattleClient:
         can_attack = self.connected and self.state in {"READY", "MY_TURN"}
         for button in self.attack_buttons.values():
             button.config(state="normal" if can_attack else "disabled")
+
+        can_chat = self.connected and self.state in {"READY", "MY_TURN", "WAITING_ACTION"}
+        self.chat_entry.config(state="normal" if can_chat else "disabled")
+        self.chat_btn.config(state="normal" if can_chat else "disabled")
 
     def connect_and_join(self):
         name = self.name_var.get().strip()
@@ -196,6 +255,18 @@ class BattleClient:
         self.state = "WAITING_ACTION"
         self.log(f"Ataque enviado: {self.ATTACKS[attack_key]['name']}")
         self.update_ui()
+
+    def send_chat(self, _event=None):
+        if not self.connected:
+            return "break"
+
+        text = self.chat_var.get().strip()
+        if not text:
+            return "break"
+
+        self.send_message(f"{CHAT}:{text[:200]}")
+        self.chat_var.set("")
+        return "break"
 
     def receive_loop(self):
         while True:
@@ -252,6 +323,15 @@ class BattleClient:
                 self.update_status()
                 if self.state != "GAME_OVER":
                     self.state = "READY"
+        elif message.startswith("MISS:"):
+            attacker_name = message.split(":", 1)[1]
+            self.log(f"{attacker_name} errou o ataque! Nenhum dano foi causado.")
+        elif message.startswith(f"{CHAT}:"):
+            chat_parts = message.split(":", 2)
+            if len(chat_parts) == 3:
+                sender_name, chat_text = chat_parts[1], chat_parts[2]
+                self.log(f"{sender_name}: {chat_text}")
+                self.speech_queue.put(f"{sender_name} disse: {chat_text}")
         elif message == "Stamina insuficiente!":
             self.state = "READY"
             self.log("Stamina insuficiente! Escolha outro ataque.")

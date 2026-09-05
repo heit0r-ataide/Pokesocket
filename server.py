@@ -3,7 +3,7 @@ from game import Game
 import socket
 import threading
 
-from protocol import READY, WAITING, START, ATTACK, TURN, WAIT_TURN, WAIT_ACTION, NAME, format_message, normalize_message
+from protocol import READY, WAITING, START, ATTACK, CHAT, TURN, WAIT_TURN, WAIT_ACTION, NAME, format_message, normalize_message
 
 
 HOST = "0.0.0.0"
@@ -103,6 +103,15 @@ def handle_client(conn, addr):
                     print(f"Nome do jogador {player_index + 1}: {chosen_name}")
                     continue
 
+                if message.startswith(f"{CHAT}:"):
+                    chat_text = message.split(":", 1)[1].strip()
+                    if not game.started or not chat_text:
+                        continue
+
+                    sender_name = get_player_label(conn, player_index)
+                    broadcast(f"{CHAT}:{sender_name}:{chat_text[:200]}")
+                    continue
+
                 if message == READY:
                     with lock:
                         if conn in ready_players:
@@ -174,6 +183,15 @@ def handle_client(conn, addr):
 
                     if resolved:
                         print("Rodada resolvida simultaneamente.")
+                        for missed_player_index in game.last_round_misses:
+                            try:
+                                missed_player = get_player_label(
+                                    clients[missed_player_index], missed_player_index
+                                )
+                                broadcast(f"MISS:{missed_player}")
+                            except Exception:
+                                pass
+
                         try:
                             broadcast_status()
                         except Exception:

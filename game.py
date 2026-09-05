@@ -1,3 +1,6 @@
+import random
+
+
 class Player:
     def __init__(self, name):
         self.name = name
@@ -7,11 +10,14 @@ class Player:
 
 
 class Game:
+    MISS_CHANCE = 0.05
+
     def __init__(self):
         self.players = []
         self.turn = 0
         self.started = False
         self.pending_actions = {}
+        self.last_round_misses = []
         self.attacks = {
             1: {"name": "Ataque rápido", "damage": 10, "stamina": 0},
             2: {"name": "Ataque normal", "damage": 20, "stamina": 15},
@@ -73,6 +79,7 @@ class Game:
 
         selected_actions = dict(self.pending_actions)
         self.pending_actions.clear()
+        self.last_round_misses = []
 
         for player_index in range(2):
             attack_key = selected_actions.get(player_index)
@@ -90,6 +97,10 @@ class Game:
                 continue
 
             defender_index = 1 - player_index
+            if random.random() < self.MISS_CHANCE:
+                self.last_round_misses.append(player_index)
+                continue
+
             damage = self.attacks[attack_key]["damage"]
             self.players[defender_index].hp -= damage
 
@@ -115,6 +126,9 @@ class Game:
         stamina_cost = attack["stamina"]
 
         self.players[attacker_index].stamina -= stamina_cost
+
+        if random.random() < self.MISS_CHANCE:
+            return defender.hp
 
         damage = attack["damage"]
         defender.hp -= damage
