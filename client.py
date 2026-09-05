@@ -277,15 +277,13 @@ class BattleClient:
             except socket.timeout:
                 continue
             except ConnectionResetError:
-                self.log("Conexão encerrada pelo servidor.")
-                self.state = "DISCONNECTED"
-                self.update_ui()
+                self.root.after(0, self.log, "Conexão encerrada pelo servidor.")
+                self.root.after(0, self.set_disconnected)
                 break
 
             if not data:
-                self.log("Servidor desconectou.")
-                self.state = "DISCONNECTED"
-                self.update_ui()
+                self.root.after(0, self.log, "Servidor desconectou.")
+                self.root.after(0, self.set_disconnected)
                 break
 
             self.buffer += data.decode("utf-8")
@@ -297,7 +295,12 @@ class BattleClient:
                 if not message:
                     continue
 
-                self.handle_message(message)
+                self.root.after(0, self.handle_message, message)
+
+    def set_disconnected(self):
+        self.connected = False
+        self.state = "DISCONNECTED"
+        self.update_ui()
 
     def handle_message(self, message):
         if message == WAITING:
